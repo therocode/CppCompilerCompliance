@@ -2,6 +2,7 @@ package compliance
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -10,6 +11,22 @@ import (
 
 type SqliteService struct {
 	db *sqlx.DB
+}
+
+func meaningfulDifference(a *Feature, b *Feature) bool {
+	return a.Name != b.Name ||
+		a.CppVersion != b.CppVersion ||
+		a.PaperName != b.PaperName ||
+		a.PaperLink != b.PaperLink ||
+		a.GccSupport != b.GccSupport ||
+		a.GccDisplayText != b.GccDisplayText ||
+		a.GccExtraText != b.GccExtraText ||
+		a.ClangSupport != b.ClangSupport ||
+		a.ClangDisplayText != b.ClangDisplayText ||
+		a.ClangExtraText != b.ClangExtraText ||
+		a.MsvcSupport != b.MsvcSupport ||
+		a.MsvcDisplayText != b.MsvcDisplayText ||
+		a.MsvcExtraText != b.MsvcExtraText
 }
 
 func NewSqliteService(db *sqlx.DB) *SqliteService {
@@ -54,8 +71,47 @@ func (s *SqliteService) CreateEntry(ctx context.Context, feature *Feature) error
 
 	return nil
 }
-func (s *SqliteService) GetLastIfDiffers(ctx context.Context, feature *Feature) (differs bool, last *Feature, err error) {
-	return true, nil, nil
+func (s *SqliteService) GetLastIfDiffers(ctx context.Context, feature *Feature) (bool, *Feature, error) {
+	query := `SELECT name, timestamp, cpp_version, paper_name, paper_link,
+		 gcc_support, gcc_display_text, gcc_extra_text,
+	     clang_support, clang_display_text, clang_extra_text,
+	     msvc_support, msvc_display_text, msvc_extra_text,
+	     reported_to_twitter, reported_broken
+		FROM features
+		WHERE name=?
+		ORDER BY timestamp DESC
+		LIMIT 1`
+
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return false, nil, errors.Wrap(err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	differs := false
+	lastEntry := &Feature{}
+
+	row := tx.QueryRowxContext(ctx, query, feature.Name)
+	err = row.StructScan(lastEntry)
+
+	if err == sql.ErrNoRows { //no entry, so it differs
+		differs = true
+		lastEntry = nil
+	} else if err != nil { //there was another error
+		return false, nil, errors.Wrap(err, "could not scan struct")
+	} else { //there is an entry. it might differ or it might not
+		if meaningfulDifference(feature, lastEntry) {
+			differs = true
+		} else {
+			lastEntry = nil
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return false, nil, errors.Wrap(err, "Failed to commit transaction")
+	}
+
+	return differs, lastEntry, nil
 }
 
 //func (s *SqliteService) Create(ctx context.Context, dog *Dog) error {

@@ -119,14 +119,23 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 							}
 
 							if differs && lastEntry == nil { //there was no prior entry, so add the first one
-								log.Printf("creating new entry of feature '%v' in database", feature.Name)
+								log.Printf("creating new entry of feature '%v' in database because there is no previous one", feature.Name)
+
+								err = complianceStorageService.CreateEntry(context.Background(), &dbFeature)
+
+								if err != nil {
+									log.Printf("error creating entry: %v", err)
+								}
+							} else if differs {
+								log.Printf("creating new entry of feature '%v' in database because the old one is different", feature.Name)
+
 								err = complianceStorageService.CreateEntry(context.Background(), &dbFeature)
 
 								if err != nil {
 									log.Printf("error creating entry: %v", err)
 								}
 							} else {
-								log.Printf("nothing to be done")
+								//log.Printf("nothing to be done")
 							}
 						}
 					}
