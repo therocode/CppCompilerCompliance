@@ -2,8 +2,10 @@ package compliance
 
 import (
 	"context"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 type SqliteService struct {
@@ -14,6 +16,46 @@ func NewSqliteService(db *sqlx.DB) *SqliteService {
 	return &SqliteService{
 		db: db,
 	}
+}
+
+func (s *SqliteService) CreateEntry(ctx context.Context, feature *Feature) error {
+	query := `INSERT INTO features
+		(name, timestamp, cpp_version, paper_name, paper_link,
+		 gcc_support, gcc_display_text, gcc_extra_text,
+	     clang_support, clang_display_text, clang_extra_text,
+	     msvc_support, msvc_display_text, msvc_extra_text,
+	     reported_to_twitter, reported_broken)
+		VALUES(:name, :timestamp, :cpp_version, :paper_name, :paper_link,
+		 :gcc_support, :gcc_display_text, :gcc_extra_text,
+		 :clang_support, :clang_display_text, :clang_extra_text,
+		 :msvc_support, :msvc_display_text, :msvc_extra_text,
+		 :reported_to_twitter, :reported_broken)`
+
+	//fill automatic fields
+	feature.Timestamp = time.Now()
+	feature.ReportedToTwitter = false
+	feature.ReportedBroken = false
+
+	tx, err := s.db.Beginx()
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.NamedExecContext(ctx, query, feature); err != nil {
+		return errors.Wrap(err, "failed to insert feature")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "Failed to commit transaction")
+	}
+
+	return nil
+}
+func (s *SqliteService) GetLastIfDiffers(ctx context.Context, feature *Feature) (differs bool, last *Feature, err error) {
+	return true, nil, nil
 }
 
 //func (s *SqliteService) Create(ctx context.Context, dog *Dog) error {

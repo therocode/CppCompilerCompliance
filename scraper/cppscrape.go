@@ -1,4 +1,4 @@
-package main
+package scraper
 
 import (
 	"fmt"
@@ -9,27 +9,18 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type CppVersion int
-
-const (
-	Cpp11 CppVersion = iota
-	Cpp14
-	Cpp17
-	Cpp20
-)
-
-func parseCppVersion(text string) (CppVersion, error) {
+func parseCppVersion(text string) (int, error) {
 	if strings.Contains(text, "11") {
-		return Cpp11, nil
+		return 11, nil
 	} else if strings.Contains(text, "14") {
-		return Cpp14, nil
+		return 14, nil
 	} else if strings.Contains(text, "17") {
-		return Cpp17, nil
+		return 17, nil
 	} else if strings.Contains(text, "2a") || strings.Contains(text, "20") {
-		return Cpp20, nil
+		return 20, nil
 	}
 
-	return Cpp11, fmt.Errorf("could not parse CPP version from '%s'", text)
+	return 0, fmt.Errorf("could not parse CPP version from '%s'", text)
 }
 
 type CompilerSupport struct {
@@ -49,26 +40,28 @@ type CppFeature struct {
 }
 
 type CppVersionSupport struct {
-	VersionId CppVersion
-	Features  []CppFeature
+	Version  int
+	Features []CppFeature
 }
 
 type CppSupport struct {
 	Versions []CppVersionSupport
 }
 
-func ScrapeCppSupport() (result CppSupport) {
+func ScrapeCppSupport() (result CppSupport, err error) {
 	// Make HTTP request
 	response, err := http.Get("https://en.cppreference.com/w/cpp/compiler_support")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%v\n", err)
+		return
 	}
 	defer response.Body.Close()
 
 	// Create a goquery document from the HTTP response
 	document, err := goquery.NewDocumentFromReader(response.Body)
 	if err != nil {
-		log.Fatal("Error loading HTTP response body. ", err)
+		log.Printf("Error loading HTTP response body: %v\n", err)
+		return
 	}
 
 	document.Find(".mw-headline").Each(func(index int, element *goquery.Selection) {
@@ -87,7 +80,7 @@ func ScrapeCppSupport() (result CppSupport) {
 		}
 
 		versionData := CppVersionSupport{}
-		versionData.VersionId = cppVersion
+		versionData.Version = cppVersion
 
 		table := element.Parent()
 
@@ -168,10 +161,10 @@ func ScrapeCppSupport() (result CppSupport) {
 			featureData.MsvcSupport.ExtraString = msvcSupportsStringExtra
 
 			//fmt.Printf("href elem:%v\n", goquery.NodeName(hrefElement))
-			fmt.Printf("title: %v, paper: %v, link: %v\n", featureTitle, featurePaperTitle, featurePaperLink)
-			fmt.Printf("  gcc support: %v - %v (%v)\n", gccSupports, gccSupportsString, gccSupportsStringExtra)
-			fmt.Printf("  clang support: %v - %v (%v)\n", clangSupports, clangSupportsString, clangSupportsStringExtra)
-			fmt.Printf("  msvc support: %v - %v (%v)\n", msvcSupports, msvcSupportsString, msvcSupportsStringExtra)
+			//fmt.Printf("title: %v, paper: %v, link: %v\n", featureTitle, featurePaperTitle, featurePaperLink)
+			//fmt.Printf("  gcc support: %v - %v (%v)\n", gccSupports, gccSupportsString, gccSupportsStringExtra)
+			//fmt.Printf("  clang support: %v - %v (%v)\n", clangSupports, clangSupportsString, clangSupportsStringExtra)
+			//fmt.Printf("  msvc support: %v - %v (%v)\n", msvcSupports, msvcSupportsString, msvcSupportsStringExtra)
 
 			versionData.Features = append(versionData.Features, featureData)
 		})
@@ -179,5 +172,5 @@ func ScrapeCppSupport() (result CppSupport) {
 		result.Versions = append(result.Versions, versionData)
 	})
 
-	return result
+	return result, nil
 }
