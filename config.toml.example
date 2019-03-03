@@ -1,0 +1,7 @@
+Database = "./data.db"
+StorageMode = "sqlite3"
+MigrateDir = "./migrations/"
+ConsumerKey = ""
+ConsumerSecret = ""
+AccessToken = ""
+AccessSecret = ""

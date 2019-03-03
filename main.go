@@ -15,14 +15,19 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/dghubble/go-twitter/twitter"
+	"github.com/dghubble/oauth1"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type Configuration struct {
-	Port               string
-	DatabaseConnection string
-	MigrateDir         string
-	StorageMode        string
+	StorageMode    string
+	Database       string
+	MigrateDir     string
+	ConsumerKey    string
+	ConsumerSecret string
+	AccessToken    string
+	AccessSecret   string
 }
 
 var rootCommand = &cobra.Command{
@@ -46,12 +51,12 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	switch cfg.StorageMode {
 	case "sqlite3":
 		//database migration
-		if err := util.SqliteMigrateUp(cfg.DatabaseConnection, cfg.MigrateDir); err != nil {
+		if err := util.SqliteMigrateUp(cfg.Database, cfg.MigrateDir); err != nil {
 			return err
 		}
 
 		//create database instance that services will use
-		db, err := util.SqliteConnect(cfg.DatabaseConnection)
+		db, err := util.SqliteConnect(cfg.Database)
 		if err != nil {
 			return err
 		}
@@ -147,6 +152,23 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}()
+
+	log.Printf("ck: %v, cs: %v, at: %v, aS: %v", cfg.ConsumerKey, cfg.ConsumerSecret, cfg.AccessToken, cfg.AccessSecret)
+
+	config := oauth1.NewConfig(cfg.ConsumerKey, cfg.ConsumerSecret)
+	token := oauth1.NewToken(cfg.AccessToken, cfg.AccessSecret)
+	// http.Client will automatically authorize Requests
+	httpClient := config.Client(oauth1.NoContext, token)
+
+	// Twitter client
+	client := twitter.NewClient(httpClient)
+
+	// Send a Tweet
+	tweet, resp, err := client.Statuses.Update("just setting up my twttr", nil)
+
+	if err != nil {
+		fmt.Printf("post tweet: %v\n, %v\n, %v\n", tweet, resp, err)
+	}
 
 	//pause here until quit yo
 	ctrlCChan := make(chan os.Signal, 1)
