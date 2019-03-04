@@ -50,8 +50,7 @@ type CppSupport struct {
 
 func ScrapeCppSupport() (result CppSupport, err error) {
 	// Make HTTP request
-	siteLink := "https://therocode.net/web/tmp/cppbleherence.html"
-	//siteLink := "https://en.cppreference.com/w/cpp/compiler_support"
+	siteLink := "https://en.cppreference.com/w/cpp/compiler_support"
 	response, err := http.Get(siteLink)
 	if err != nil {
 		log.Printf("%v\n", err)
