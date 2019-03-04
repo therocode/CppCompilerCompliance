@@ -73,8 +73,13 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	//managers
-	//dogManager := dog.NewManager(complianceStorageService)
+	//set up twitter client
+	config := oauth1.NewConfig(cfg.ConsumerKey, cfg.ConsumerSecret)
+	token := oauth1.NewToken(cfg.AccessToken, cfg.AccessSecret)
+	// http.Client will automatically authorize Requests
+	httpClient := config.Client(oauth1.NoContext, token)
+	// Twitter client
+	client := twitter.NewClient(httpClient)
 
 	//signal that's used to signal quit
 	quitChan := make(chan struct{})
@@ -153,22 +158,58 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	log.Printf("ck: %v, cs: %v, at: %v, aS: %v", cfg.ConsumerKey, cfg.ConsumerSecret, cfg.AccessToken, cfg.AccessSecret)
+	//launch ticker that posts reports as tweets
+	tweetReporterTicker := time.NewTicker(17 * time.Second)
+	go func() {
+		println("starting tweet reporter ticker")
+		for {
+			select {
+			case <-tweetReporterTicker.C:
 
-	config := oauth1.NewConfig(cfg.ConsumerKey, cfg.ConsumerSecret)
-	token := oauth1.NewToken(cfg.AccessToken, cfg.AccessSecret)
-	// http.Client will automatically authorize Requests
-	httpClient := config.Client(oauth1.NoContext, token)
+				unreportedEntries, err := complianceStorageService.GetNotTwitterReported(context.Background())
 
-	// Twitter client
-	client := twitter.NewClient(httpClient)
+				if err != nil {
+					log.Printf("error getting entries not reported to twitter: %v\n", err)
+					continue
+				}
 
-	// Send a Tweet
-	tweet, resp, err := client.Statuses.Update("just setting up my twttr", nil)
+				for _, entry := range unreportedEntries {
+					previous, err := complianceStorageService.GetPreviousFeatureEntry(context.Background(), &entry)
 
-	if err != nil {
-		fmt.Printf("post tweet: %v\n, %v\n, %v\n", tweet, resp, err)
-	}
+					if err != nil {
+						log.Printf("error when getting previous feature entry: %v\n", err)
+						continue
+					}
+
+					twitterReport, err := compliance.FeatureToTwitterReport(previous, &entry)
+
+					if err != nil {
+						log.Printf("not capable of turning update into report: %v\n", err)
+
+						//handle error
+						//mark reported
+						continue
+					}
+
+					//tweet, resp, err
+
+					_, _, err = client.Statuses.Update(twitterReport, nil)
+					log.Printf("posting tweet: %v\n", twitterReport)
+
+					if err != nil {
+						log.Printf("error posting tweet update: %v\n", err)
+						continue
+					} else {
+						complianceStorageService.SetTwitterReported(context.Background(), &entry)
+					}
+				}
+			case <-quitChan:
+				println("stopping tweet reporter ticker")
+				tweetReporterTicker.Stop()
+				return
+			}
+		}
+	}()
 
 	//pause here until quit yo
 	ctrlCChan := make(chan os.Signal, 1)
