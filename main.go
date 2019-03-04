@@ -88,22 +88,16 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	//launch ticker that polls website
 	webFetcherTicker := time.NewTicker(30 * time.Second)
 	go func() {
-		println("starting web fetcher ticker")
+		log.Println("starting web fetcher ticker")
 		for {
 			select {
 			case <-webFetcherTicker.C:
-				log.Println("fetching cppreference")
 				scraped, err := scraper.ScrapeCppSupport()
 
 				if err != nil {
 					log.Printf("error when scraping cpp support data: %v\n", err)
 				} else {
-					//use scraped data
-					log.Println("done fetching")
-
 					for _, cppVersion := range scraped.Versions {
-						log.Printf("checking for changes in features of C++%v\n", cppVersion.Version)
-
 						for _, feature := range cppVersion.Features {
 
 							dbFeature := compliance.Feature{
@@ -152,7 +146,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 					}
 				}
 			case <-quitChan:
-				println("stopping web fetcher ticker")
+				log.Println("stopping web fetcher ticker")
 				webFetcherTicker.Stop()
 				return
 			}
@@ -162,7 +156,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	//launch ticker that posts reports as tweets
 	tweetReporterTicker := time.NewTicker(17 * time.Second)
 	go func() {
-		println("starting tweet reporter ticker")
+		log.Println("starting tweet reporter ticker")
 		for {
 			select {
 			case <-tweetReporterTicker.C:
@@ -228,7 +222,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 					}
 				}
 			case <-quitChan:
-				println("stopping tweet reporter ticker")
+				log.Println("stopping tweet reporter ticker")
 				tweetReporterTicker.Stop()
 				return
 			}
@@ -240,7 +234,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	signal.Notify(ctrlCChan, os.Interrupt)
 	go func() {
 		for _ = range ctrlCChan {
-			println("will shut down...")
+			log.Println("will shut down...")
 			close(quitChan)
 		}
 	}()

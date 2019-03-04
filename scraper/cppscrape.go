@@ -72,8 +72,6 @@ func ScrapeCppSupport() (result CppSupport, err error) {
 			return
 		}
 
-		fmt.Printf("C++ version: %v\n", titleText)
-
 		cppVersion, err := parseCppVersion(titleText)
 		if err != nil {
 			log.Print(err)
