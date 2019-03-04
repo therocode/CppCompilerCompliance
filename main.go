@@ -21,13 +21,14 @@ import (
 )
 
 type Configuration struct {
-	StorageMode    string
-	Database       string
-	MigrateDir     string
-	ConsumerKey    string
-	ConsumerSecret string
-	AccessToken    string
-	AccessSecret   string
+	StorageMode         string
+	Database            string
+	MigrateDir          string
+	ConsumerKey         string
+	ConsumerSecret      string
+	AccessToken         string
+	AccessSecret        string
+	MaintainerTwitterId string
 }
 
 var rootCommand = &cobra.Command{
@@ -184,15 +185,38 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 					twitterReport, err := compliance.FeatureToTwitterReport(previous, &entry)
 
 					if err != nil {
-						log.Printf("not capable of turning update into report: %v\n", err)
+						log.Printf("not capable of turning update into report. will try to report this as private tweet: %v\n", err)
+						if entry.ReportedBroken {
+							log.Printf("this error is already reported, skip entry\n")
+							continue
+						}
 
-						//handle error
-						//mark reported
+						message := fmt.Sprintf("Hello! There was an issue with a change on cppreference that I don't know how to turn into a report.\nThe involved entries are '%v' '%v' and '%v' '%v'. \nFull expansion of those:\n\n%v\n\n%v", previous.Name, previous.Timestamp, entry.Name, entry.Timestamp, previous, entry)
+						//directmessage, httpresponse, err
+						_, _, err = client.DirectMessages.EventsNew(&twitter.DirectMessageEventsNewParams{
+							Event: &twitter.DirectMessageEvent{
+								Type: "message_create",
+								Message: &twitter.DirectMessageEventMessage{
+									Target: &twitter.DirectMessageTarget{
+										RecipientID: cfg.MaintainerTwitterId,
+									},
+									Data: &twitter.DirectMessageData{
+										Text: message,
+									},
+								},
+							},
+						})
+
+						if err != nil {
+							log.Printf("did not manage to report by twitter pm that I couldn't report to twitter: %v\n", err)
+						} else {
+							log.Printf("error report sent.\n")
+							complianceStorageService.SetErrorReported(context.Background(), &entry)
+						}
 						continue
 					}
 
 					//tweet, resp, err
-
 					_, _, err = client.Statuses.Update(twitterReport, nil)
 					log.Printf("posting tweet: %v\n", twitterReport)
 

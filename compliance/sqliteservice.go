@@ -210,6 +210,27 @@ func (s *SqliteService) SetTwitterReported(ctx context.Context, feature *Feature
 	return nil
 }
 
+func (s *SqliteService) SetErrorReported(ctx context.Context, feature *Feature) error {
+	query := "UPDATE features SET reported_broken=1 WHERE name=:name AND timestamp=:timestamp"
+
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return errors.Wrap(err, "Failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.NamedExecContext(ctx, query, feature); err != nil {
+		return errors.Wrap(err, "Failed to set feature to reported broken")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "Failed to commit transaction")
+	}
+
+	return nil
+}
+
 //func (s *SqliteService) Create(ctx context.Context, dog *Dog) error {
 //	query := `INSERT INTO dogs
 //		(name, age, breed, petted_count)

@@ -8,6 +8,7 @@ type Service interface {
 	GetNotTwitterReported(ctx context.Context) ([]Feature, error)
 	GetPreviousFeatureEntry(ctx context.Context, feature *Feature) (*Feature, error)
 	SetTwitterReported(ctx context.Context, feature *Feature) error
+	SetErrorReported(ctx context.Context, feature *Feature) error
 	//Create(ctx context.Context, dog *Dog) error
 	//Get(ctx context.Context, id uint64) (*Dog, error)
 	//List(ctx context.Context) (Dogs, error)
