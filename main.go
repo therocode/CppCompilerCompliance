@@ -29,6 +29,8 @@ type Configuration struct {
 	AccessToken         string
 	AccessSecret        string
 	MaintainerTwitterId string
+	SafeMode            bool
+	SafeModeMaxReports  int
 }
 
 var rootCommand = &cobra.Command{
@@ -172,6 +174,36 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 				if err != nil {
 					log.Printf("error getting entries not reported to twitter: %v\n", err)
 					continue
+				}
+
+				amountToReport := len(unreportedEntries)
+
+				if amountToReport > cfg.SafeModeMaxReports && cfg.SafeMode {
+					log.Printf("Found %v entries to report, this is too many for safe mode (limit is %v)... will not report\n", cfg.SafeModeMaxReports, amountToReport)
+
+					message := fmt.Sprintf("Hello! There were too many reports for safe mode (limit is %v). I won't report anything until you look into this. Amount of reports was %v", cfg.SafeModeMaxReports, amountToReport)
+					//directmessage, httpresponse, err
+					_, _, err = client.DirectMessages.EventsNew(&twitter.DirectMessageEventsNewParams{
+						Event: &twitter.DirectMessageEvent{
+							Type: "message_create",
+							Message: &twitter.DirectMessageEventMessage{
+								Target: &twitter.DirectMessageTarget{
+									RecipientID: cfg.MaintainerTwitterId,
+								},
+								Data: &twitter.DirectMessageData{
+									Text: message,
+								},
+							},
+						},
+					})
+
+					if err != nil {
+						log.Printf("did not manage to report by twitter pm that there are too many reports (%v reports). Errors was: %v\n", amountToReport, err)
+					}
+
+					log.Printf("stopping tweet reporter ticker\n")
+
+					return
 				}
 
 				for _, entry := range unreportedEntries {
@@ -350,6 +382,8 @@ func initConfig() {
 	viper.SetDefault("DatabaseConnection", "./data.db")
 	viper.SetDefault("MigrateDir", "./migrations")
 	viper.SetDefault("StorageMode", "sqlite3")
+	viper.SetDefault("SafeMode", true)
+	viper.SetDefault("SafeModeMaxReports", 5)
 
 	var cfgFile string
 
