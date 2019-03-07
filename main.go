@@ -33,6 +33,8 @@ type Configuration struct {
 	SafeModeMaxReports    int
 	WebScrapeInterval     int
 	TwitterReportInterval int
+	SupressReporting      bool //if this is true, all changes will be marked as reported without actually reporting them
+	DryReporting          bool //if this is true, changes will be reported using prints only, and not marked as reported
 }
 
 var rootCommand = &cobra.Command{
@@ -96,9 +98,9 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	quitChan := make(chan struct{})
 
 	//launch ticker that polls website
-	webFetcherTicker := time.NewTicker(30 * time.Second)
+	webFetcherTicker := time.NewTicker(time.Duration(cfg.WebScrapeInterval) * time.Second)
 	go func() {
-		log.Println("starting web fetcher ticker with %v seconds interval", cfg.WebScrapeInterval)
+		log.Printf("starting web fetcher ticker with %v seconds interval", cfg.WebScrapeInterval)
 		for {
 			select {
 			case <-webFetcherTicker.C:
@@ -164,9 +166,9 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	}()
 
 	//launch ticker that posts reports as tweets
-	tweetReporterTicker := time.NewTicker(17 * time.Second)
+	tweetReporterTicker := time.NewTicker(time.Duration(cfg.TwitterReportInterval) * time.Second)
 	go func() {
-		log.Println("starting tweet reporter ticker with %v seconds interval", cfg.TwitterReportInterval)
+		log.Printf("starting tweet reporter ticker with %v seconds interval", cfg.TwitterReportInterval)
 		for {
 			select {
 			case <-tweetReporterTicker.C:
@@ -250,14 +252,25 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 						continue
 					}
 
-					//tweet, resp, err
-					_, _, err = client.Statuses.Update(twitterReport, nil)
-					log.Printf("posting tweet: %v\n", twitterReport)
+					if !cfg.SupressReporting {
+						messagePrefix := "Dry run: "
+						//tweet, resp, err
+						if !cfg.DryReporting {
+							_, _, err = client.Statuses.Update(twitterReport, nil)
+							messagePrefix = ""
+						}
+						log.Printf(messagePrefix+"posting tweet: %v\n", twitterReport)
 
-					if err != nil {
-						log.Printf("error posting tweet update: %v\n", err)
-						continue
+						if err != nil {
+							log.Printf("error posting tweet update: %v\n", err)
+							continue
+						} else {
+							if !cfg.DryReporting {
+								complianceStorageService.SetTwitterReported(context.Background(), &entry)
+							}
+						}
 					} else {
+						log.Printf("got twitter report which will be supressed: %v\n", twitterReport)
 						complianceStorageService.SetTwitterReported(context.Background(), &entry)
 					}
 				}
@@ -388,6 +401,8 @@ func initConfig() {
 	viper.SetDefault("SafeModeMaxReports", 5)
 	viper.SetDefault("WebScrapeInterval", 300)
 	viper.SetDefault("TwitterReportInterval", 300)
+	viper.SetDefault("SupressReporting", false)
+	viper.SetDefault("DryReporting", false)
 
 	var cfgFile string
 

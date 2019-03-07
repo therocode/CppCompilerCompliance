@@ -10,3 +10,5 @@ SafeMode = true
 SafeModeMaxReports = 5
 WebScrapeInterval = 300
 TwitterReportInterval = 21
+SupressReporting = false
+DryReporting = false
