@@ -183,7 +183,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 				amountToReport := len(unreportedEntries)
 
 				if amountToReport > cfg.SafeModeMaxReports && cfg.SafeMode {
-					log.Printf("Found %v entries to report, this is too many for safe mode (limit is %v)... will not report\n", cfg.SafeModeMaxReports, amountToReport)
+					log.Printf("Found %v entries to report, this is too many for safe mode (limit is %v)... will not report\n", amountToReport, cfg.SafeModeMaxReports)
 
 					message := fmt.Sprintf("Hello! There were too many reports for safe mode (limit is %v). I won't report anything until you look into this. Amount of reports was %v", cfg.SafeModeMaxReports, amountToReport)
 					//directmessage, httpresponse, err
