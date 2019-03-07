@@ -37,6 +37,12 @@ var rootCommand = &cobra.Command{
 	RunE:  rootCmdFunc,
 }
 
+var testCommand = &cobra.Command{
+	Use:   "test",
+	Short: "Test the text reporting functionality",
+	RunE:  testCmdFunc,
+}
+
 func rootCmdFunc(cmd *cobra.Command, args []string) error {
 
 	cfg := &Configuration{}
@@ -244,6 +250,101 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func testCmdFunc(cmd *cobra.Command, args []string) error {
+	log.Print("=====Testing text reports=====\n\n")
+
+	//note: fake data
+	baseFeature := compliance.Feature{
+		Name:             "Initializer list constructors in class template argument deduction",
+		CppVersion:       20,
+		PaperName:        sql.NullString{"P0702R1", true},
+		PaperLink:        sql.NullString{"https://wg21.link/P0702R1", true},
+		GccSupport:       false,
+		GccDisplayText:   sql.NullString{"", true},
+		GccExtraText:     sql.NullString{"", true},
+		ClangSupport:     true,
+		ClangDisplayText: sql.NullString{"6 (partial)*", true},
+		ClangExtraText:   sql.NullString{"only supported if flag supplied", true},
+		MsvcSupport:      false,
+		MsvcDisplayText:  sql.NullString{"", true},
+		MsvcExtraText:    sql.NullString{"", true},
+	}
+
+	newSupportFeature := baseFeature
+	newSupportFeature.GccSupport = true
+	newSupportFeature.GccDisplayText = sql.NullString{"9*", true}
+	newSupportFeature.GccExtraText = sql.NullString{"still some bugs", true}
+
+	newSupportMultipleFeature := newSupportFeature
+	newSupportMultipleFeature.MsvcSupport = true
+	newSupportMultipleFeature.MsvcDisplayText = sql.NullString{"19.20", true}
+	newSupportMultipleFeature.MsvcExtraText = sql.NullString{"", true}
+
+	textChangeFeature := baseFeature
+	textChangeFeature.ClangDisplayText = sql.NullString{"6", true}
+	textChangeFeature.ClangExtraText = sql.NullString{"", true}
+
+	textChangeMultipleFeature := textChangeFeature
+	textChangeMultipleFeature.MsvcDisplayText = sql.NullString{"19.20", true}
+	textChangeMultipleFeature.MsvcExtraText = sql.NullString{"one bug", true}
+
+	//test for when a new feature is listed
+	text, err := compliance.FeatureToTwitterReport(nil, &baseFeature)
+
+	if err != nil {
+		log.Printf("Report when a new feature is added to the listing:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a new feature is added to the listing:\n%v\n\n", text)
+	}
+
+	//test for when a new feature is listed with full support
+	text, err = compliance.FeatureToTwitterReport(nil, &newSupportMultipleFeature)
+
+	if err != nil {
+		log.Printf("Report when a new feature is added to the listing with full support:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a new feature is added to the listing with full support:\n%v\n\n", text)
+	}
+
+	//test for when a feature has gained support in a compiler
+	text, err = compliance.FeatureToTwitterReport(&baseFeature, &newSupportFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature has gained compiler support:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature has gained compiler support:\n%v\n\n", text)
+	}
+
+	//test for when a feature has gained multiple support in a compiler
+	text, err = compliance.FeatureToTwitterReport(&baseFeature, &newSupportMultipleFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature has gained multiple compiler support:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature has gained multiple compiler support:\n%v\n\n", text)
+	}
+
+	//test for when a feature has had its text changed
+	text, err = compliance.FeatureToTwitterReport(&baseFeature, &textChangeFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature had its text changed:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature had its text changed:\n%v\n\n", text)
+	}
+
+	//test for when a feature has had mutiple texts changed
+	text, err = compliance.FeatureToTwitterReport(&newSupportFeature, &textChangeMultipleFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature had multiple text changed:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature had multiple text changed:\n%v\n\n", text)
+	}
+
+	return nil
+}
+
 func initConfig() {
 	//viper.SetDefault("Port", "8080")
 	viper.SetDefault("DatabaseConnection", "./data.db")
@@ -271,6 +372,8 @@ func initConfig() {
 
 func main() {
 	cobra.OnInitialize(initConfig)
+
+	rootCommand.AddCommand(testCommand)
 
 	if err := rootCommand.Execute(); err != nil {
 		os.Exit(1)
