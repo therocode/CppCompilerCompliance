@@ -137,7 +137,7 @@ func ScrapeCppSupport() (result CppSupport, err error) {
 			featureData.GccSupport.DisplayString = gccSupportsString
 			featureData.GccSupport.ExtraString = gccSupportsStringExtra
 
-			clangDataElement := gccDataElement.Next().Next()
+			clangDataElement := gccDataElement.Next()
 			clangSupports := clangDataElement.HasClass("table-yes")
 			clangSupportsString := clangDataElement.Text()
 			clangSupportsString = strings.TrimSpace(clangSupportsString)
@@ -148,7 +148,7 @@ func ScrapeCppSupport() (result CppSupport, err error) {
 			featureData.ClangSupport.DisplayString = clangSupportsString
 			featureData.ClangSupport.ExtraString = clangSupportsStringExtra
 
-			msvcDataElement := clangDataElement.Next().Next()
+			msvcDataElement := clangDataElement.Next()
 			msvcSupports := msvcDataElement.HasClass("table-yes")
 			msvcSupportsString := msvcDataElement.Text()
 			msvcSupportsString = strings.TrimSpace(msvcSupportsString)
