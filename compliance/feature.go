@@ -36,6 +36,16 @@ const (
 	TrimLimit           = TwitterLimit + (CppRefLinkSize - TwitterShortUrlSize)
 )
 
+func countTrue(bools ...bool) (result int) {
+	for _, b := range bools {
+		if b {
+			result++
+		}
+	}
+
+	return
+}
+
 func twitterTrimmed(text string) (result string) {
 	if len(text) > TrimLimit {
 		result = text[0:TrimLimit-3] + "..."
@@ -54,14 +64,18 @@ func fromNullString(text sql.NullString) string {
 	}
 }
 
+func compilerVersionTextString(displayText string, extraText string) string {
+	result := displayText
+	extra := extraText
+	if len(extra) > 0 {
+		result += "(" + extraText + ")"
+	}
+	return result
+}
+
 func compilerSupportString(support bool, displayText string, extraText string) string {
 	if support {
-		result := "yes from version: " + displayText
-		extra := extraText
-		if len(extra) > 0 {
-			result += "(" + extraText + ")"
-		}
-		return result
+		return "yes from version: " + compilerVersionTextString(displayText, extraText)
 	} else {
 		return "no"
 	}
@@ -74,6 +88,20 @@ func compilerSupportStringOrNothing(support bool, displayText string, extraText 
 		return ""
 	}
 }
+
+func compilerTextChangeStringOrNothing(previousDisplayText string, previousExtraText string, nextDisplayText string, nextExtraText string) string {
+	previousText := compilerVersionTextString(previousDisplayText, previousExtraText)
+	nextText := compilerVersionTextString(nextDisplayText, nextExtraText)
+
+	bothEmpty := previousText == "" && nextText == ""
+
+	if !bothEmpty {
+		return fmt.Sprintf("'%v' -> '%v'", previousText, nextText)
+	} else {
+		return ""
+	}
+}
+
 func isReportTypeNewFeatureAdded(previous *Feature, next *Feature) bool {
 	return previous == nil && next != nil
 }
@@ -82,6 +110,15 @@ func isReportTypeSupportAdded(previous *Feature, next *Feature) bool {
 	return (!previous.GccSupport && next.GccSupport) ||
 		(!previous.ClangSupport && next.ClangSupport) ||
 		(!previous.MsvcSupport && next.MsvcSupport)
+}
+
+func isReportTypeTextChanged(previous *Feature, next *Feature) bool {
+	return (previous.GccDisplayText != next.GccDisplayText) ||
+		(previous.GccExtraText != next.GccExtraText) ||
+		(previous.ClangDisplayText != next.ClangDisplayText) ||
+		(previous.ClangExtraText != next.ClangExtraText) ||
+		(previous.MsvcDisplayText != next.MsvcDisplayText) ||
+		(previous.MsvcExtraText != next.MsvcExtraText)
 }
 
 func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
@@ -99,28 +136,72 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 		return reportText, nil
 
 	} else if isReportTypeSupportAdded(previous, next) {
-		gccBit := compilerSupportStringOrNothing(!previous.GccSupport && next.GccSupport, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
-		clangBit := compilerSupportStringOrNothing(!previous.ClangSupport && next.ClangSupport, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
-		msvcBit := compilerSupportStringOrNothing(!previous.MsvcSupport && next.MsvcSupport, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
+		gccAdded := !previous.GccSupport && next.GccSupport
+		clangAdded := !previous.ClangSupport && next.ClangSupport
+		msvcAdded := !previous.MsvcSupport && next.MsvcSupport
+
+		gccBit := compilerSupportStringOrNothing(gccAdded, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
+		clangBit := compilerSupportStringOrNothing(clangAdded, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
+		msvcBit := compilerSupportStringOrNothing(msvcAdded, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
 
 		reportText := fmt.Sprintf("Support for the C++%v feature '%v' has been updated at https://en.cppreference.com/w/cpp/compiler_support. Support added: ", next.CppVersion, next.Name)
 
-		if len(gccBit) > 0 {
+		if gccAdded {
 			reportText += "GCC: " + gccBit
 		}
 
-		if len(clangBit) > 0 {
+		if clangAdded {
 
-			if len(gccBit) > 0 {
+			if gccAdded {
 				reportText += ", "
 			}
 
 			reportText += "Clang: " + clangBit
 		}
 
-		if len(msvcBit) > 0 {
+		if msvcAdded {
 
-			if len(clangBit) > 0 || len(gccBit) > 0 {
+			if gccAdded || clangAdded {
+				reportText += ", "
+			}
+
+			reportText += "MSVC: " + msvcBit
+		}
+
+		reportText = twitterTrimmed(reportText)
+
+		return reportText, nil
+	} else if isReportTypeTextChanged(previous, next) {
+		gccTextChanged := previous.GccDisplayText != next.GccDisplayText || previous.GccExtraText != next.GccExtraText
+		clangTextChanged := previous.ClangDisplayText != next.ClangDisplayText || previous.ClangExtraText != next.ClangExtraText
+		msvcTextChanged := previous.MsvcDisplayText != next.MsvcDisplayText || previous.MsvcExtraText != next.MsvcExtraText
+
+		gccBit := compilerTextChangeStringOrNothing(fromNullString(previous.GccDisplayText), fromNullString(previous.GccExtraText), fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
+		clangBit := compilerTextChangeStringOrNothing(fromNullString(previous.ClangDisplayText), fromNullString(previous.ClangExtraText), fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
+		msvcBit := compilerTextChangeStringOrNothing(fromNullString(previous.MsvcDisplayText), fromNullString(previous.MsvcExtraText), fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
+
+		var pluralSuffix string
+
+		if countTrue(gccTextChanged, clangTextChanged, msvcTextChanged) > 1 {
+			pluralSuffix += "s"
+		}
+
+		reportText := fmt.Sprintf("Support text%v changed for the C++%v feature '%v'. Change%v: ", pluralSuffix, next.CppVersion, next.Name, pluralSuffix)
+
+		if gccTextChanged {
+			reportText += "GCC: " + gccBit
+		}
+
+		if clangTextChanged {
+			if gccTextChanged {
+				reportText += ", "
+			}
+
+			reportText += "Clang: " + clangBit
+		}
+
+		if msvcTextChanged {
+			if gccTextChanged || clangTextChanged {
 				reportText += ", "
 			}
 
