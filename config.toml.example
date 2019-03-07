@@ -6,3 +6,7 @@ ConsumerSecret = ""
 AccessToken = ""
 AccessSecret = ""
 MaintainerTwitterId = "293492349234"
+SafeMode = true
+SafeModeMaxReports = 5
+WebScrapeInterval = 300
+TwitterReportInterval = 21

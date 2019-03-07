@@ -21,16 +21,18 @@ import (
 )
 
 type Configuration struct {
-	StorageMode         string
-	Database            string
-	MigrateDir          string
-	ConsumerKey         string
-	ConsumerSecret      string
-	AccessToken         string
-	AccessSecret        string
-	MaintainerTwitterId string
-	SafeMode            bool
-	SafeModeMaxReports  int
+	StorageMode           string
+	Database              string
+	MigrateDir            string
+	ConsumerKey           string
+	ConsumerSecret        string
+	AccessToken           string
+	AccessSecret          string
+	MaintainerTwitterId   string
+	SafeMode              bool
+	SafeModeMaxReports    int
+	WebScrapeInterval     int
+	TwitterReportInterval int
 }
 
 var rootCommand = &cobra.Command{
@@ -96,7 +98,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	//launch ticker that polls website
 	webFetcherTicker := time.NewTicker(30 * time.Second)
 	go func() {
-		log.Println("starting web fetcher ticker")
+		log.Println("starting web fetcher ticker with %v seconds interval", cfg.WebScrapeInterval)
 		for {
 			select {
 			case <-webFetcherTicker.C:
@@ -164,7 +166,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 	//launch ticker that posts reports as tweets
 	tweetReporterTicker := time.NewTicker(17 * time.Second)
 	go func() {
-		log.Println("starting tweet reporter ticker")
+		log.Println("starting tweet reporter ticker with %v seconds interval", cfg.TwitterReportInterval)
 		for {
 			select {
 			case <-tweetReporterTicker.C:
@@ -384,6 +386,8 @@ func initConfig() {
 	viper.SetDefault("StorageMode", "sqlite3")
 	viper.SetDefault("SafeMode", true)
 	viper.SetDefault("SafeModeMaxReports", 5)
+	viper.SetDefault("WebScrapeInterval", 300)
+	viper.SetDefault("TwitterReportInterval", 300)
 
 	var cfgFile string
 
