@@ -96,7 +96,7 @@ func compilerTextChangeStringOrNothing(previousDisplayText string, previousExtra
 	bothEmpty := previousText == "" && nextText == ""
 
 	if !bothEmpty {
-		return fmt.Sprintf("'%v' -> '%v'", previousText, nextText)
+		return fmt.Sprintf("\"%v\" -> \"%v\"", previousText, nextText)
 	} else {
 		return ""
 	}
@@ -125,12 +125,12 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 	if isReportTypeNewFeatureAdded(previous, next) {
 		//feature not currently there has been added
 		//"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-		//"A new feature 'Initializer list constructors in class template argument deduction' has been added for C++20 at cppreferencelink. Current compiler support: GCC: yes from version 4* (not fully supported), Clang: no, MSVC: yes from version 5"
+		//"A new feature \"Initializer list constructors in class template argument deduction\" has been added for C++20 at cppreferencelink. Current compiler support: GCC: yes from version 4* (not fully supported), Clang: no, MSVC: yes from version 5"
 		gccBit := compilerSupportString(next.GccSupport, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
 		clangBit := compilerSupportString(next.ClangSupport, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
 		msvcBit := compilerSupportString(next.MsvcSupport, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
 
-		reportText := fmt.Sprintf("A new C++%v feature '%v' has been added at https://en.cppreference.com/w/cpp/compiler_support. Current compiler support: GCC: %v, Clang: %v, MSVC: %v", next.CppVersion, next.Name, gccBit, clangBit, msvcBit)
+		reportText := fmt.Sprintf("A new C++%v feature \"%v\" has been added at https://en.cppreference.com/w/cpp/compiler_support. Current compiler support: GCC: %v, Clang: %v, MSVC: %v", next.CppVersion, next.Name, gccBit, clangBit, msvcBit)
 		reportText = twitterTrimmed(reportText)
 
 		return reportText, nil
@@ -144,7 +144,7 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 		clangBit := compilerSupportStringOrNothing(clangAdded, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
 		msvcBit := compilerSupportStringOrNothing(msvcAdded, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
 
-		reportText := fmt.Sprintf("Support for the C++%v feature '%v' has been updated at https://en.cppreference.com/w/cpp/compiler_support. Support added: ", next.CppVersion, next.Name)
+		reportText := fmt.Sprintf("Support for the C++%v feature \"%v\" has been updated at https://en.cppreference.com/w/cpp/compiler_support. Support added: ", next.CppVersion, next.Name)
 
 		if gccAdded {
 			reportText += "GCC: " + gccBit
@@ -186,7 +186,7 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 			pluralSuffix += "s"
 		}
 
-		reportText := fmt.Sprintf("Support text%v changed for the C++%v feature '%v'. Change%v: ", pluralSuffix, next.CppVersion, next.Name, pluralSuffix)
+		reportText := fmt.Sprintf("Support text%v changed for the C++%v feature \"%v\". Change%v: ", pluralSuffix, next.CppVersion, next.Name, pluralSuffix)
 
 		if gccTextChanged {
 			reportText += "GCC: " + gccBit
