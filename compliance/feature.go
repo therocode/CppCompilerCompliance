@@ -112,6 +112,12 @@ func isReportTypeSupportAdded(previous *Feature, next *Feature) bool {
 		(!previous.MsvcSupport && next.MsvcSupport)
 }
 
+func isReportTypeSupportRemoved(previous *Feature, next *Feature) bool {
+	return (previous.GccSupport && !next.GccSupport) ||
+		(previous.ClangSupport && !next.ClangSupport) ||
+		(previous.MsvcSupport && !next.MsvcSupport)
+}
+
 func isReportTypeTextChanged(previous *Feature, next *Feature) bool {
 	return (previous.GccDisplayText != next.GccDisplayText) ||
 		(previous.GccExtraText != next.GccExtraText) ||
@@ -135,7 +141,7 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 
 		return reportText, nil
 
-	} else if isReportTypeSupportAdded(previous, next) {
+	} else if isReportTypeSupportAdded(previous, next) && !isReportTypeSupportRemoved(previous, next) {
 		gccAdded := !previous.GccSupport && next.GccSupport
 		clangAdded := !previous.ClangSupport && next.ClangSupport
 		msvcAdded := !previous.MsvcSupport && next.MsvcSupport
@@ -162,6 +168,42 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 		if msvcAdded {
 
 			if gccAdded || clangAdded {
+				reportText += ", "
+			}
+
+			reportText += "MSVC: " + msvcBit
+		}
+
+		reportText = twitterTrimmed(reportText)
+
+		return reportText, nil
+	} else if isReportTypeSupportRemoved(previous, next) && !isReportTypeSupportAdded(previous, next) {
+		gccRemoved := previous.GccSupport && !next.GccSupport
+		clangRemoved := previous.ClangSupport && !next.ClangSupport
+		msvcRemoved := previous.MsvcSupport && !next.MsvcSupport
+
+		gccBit := compilerSupportString(!gccRemoved, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
+		clangBit := compilerSupportString(!clangRemoved, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
+		msvcBit := compilerSupportString(!msvcRemoved, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
+
+		reportText := fmt.Sprintf("Support for the C++%v feature \"%v\" has been removed at https://en.cppreference.com/w/cpp/compiler_support. Resulting statuses: ", next.CppVersion, next.Name)
+
+		if gccRemoved {
+			reportText += "GCC: " + gccBit
+		}
+
+		if clangRemoved {
+
+			if gccRemoved {
+				reportText += ", "
+			}
+
+			reportText += "Clang: " + clangBit
+		}
+
+		if msvcRemoved {
+
+			if gccRemoved || clangRemoved {
 				reportText += ", "
 			}
 

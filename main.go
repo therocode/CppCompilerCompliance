@@ -371,6 +371,24 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 		log.Printf("Report when a feature has gained multiple compiler support:\n%v\n\n", text)
 	}
 
+	//test for when a feature has lost support in a compiler
+	text, err = compliance.FeatureToTwitterReport(&newSupportFeature, &baseFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature has lost compiler support:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature has lost compiler support:\n%v\n\n", text)
+	}
+
+	//test for when a feature has lost multiple support in a compiler
+	text, err = compliance.FeatureToTwitterReport(&newSupportMultipleFeature, &baseFeature)
+
+	if err != nil {
+		log.Printf("Report when a feature has lost multiple compiler support:\n Error: %v\n\n", err)
+	} else {
+		log.Printf("Report when a feature has lost multiple compiler support:\n%v\n\n", text)
+	}
+
 	//test for when a feature has had its text changed
 	text, err = compliance.FeatureToTwitterReport(&baseFeature, &textChangeFeature)
 
