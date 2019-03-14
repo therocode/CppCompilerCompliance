@@ -8,6 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	SupportNo      = 0
+	SupportYes     = 1
+	SupportPartial = 2
+)
+
 type Features []*Feature
 
 type Feature struct {
@@ -16,13 +22,13 @@ type Feature struct {
 	CppVersion        int            `db:"cpp_version"`
 	PaperName         sql.NullString `db:"paper_name"`
 	PaperLink         sql.NullString `db:"paper_link"`
-	GccSupport        bool           `db:"gcc_support"`
+	GccSupport        int            `db:"gcc_support"`
 	GccDisplayText    sql.NullString `db:"gcc_display_text"`
 	GccExtraText      sql.NullString `db:"gcc_extra_text"`
-	ClangSupport      bool           `db:"clang_support"`
+	ClangSupport      int            `db:"clang_support"`
 	ClangDisplayText  sql.NullString `db:"clang_display_text"`
 	ClangExtraText    sql.NullString `db:"clang_extra_text"`
-	MsvcSupport       bool           `db:"msvc_support"`
+	MsvcSupport       int            `db:"msvc_support"`
 	MsvcDisplayText   sql.NullString `db:"msvc_display_text"`
 	MsvcExtraText     sql.NullString `db:"msvc_extra_text"`
 	ReportedToTwitter bool           `db:"reported_to_twitter"`
@@ -73,17 +79,19 @@ func compilerVersionTextString(displayText string, extraText string) string {
 	return result
 }
 
-func compilerSupportString(support bool, displayText string, extraText string) string {
-	if support {
-		return "yes from version: " + compilerVersionTextString(displayText, extraText)
-	} else {
+func compilerSupportString(support int, displayText string, extraText string) string {
+	if support == 0 {
 		return "no"
+	} else if support == 1 {
+		return "yes - " + compilerVersionTextString(displayText, extraText)
+	} else {
+		return "partial - " + compilerVersionTextString(displayText, extraText)
 	}
 }
 
-func compilerSupportStringOrNothing(support bool, displayText string, extraText string) string {
-	if support {
-		return compilerSupportString(true, displayText, extraText)
+func compilerSupportStringOrNothing(support int, displayText string, extraText string) string {
+	if support != 0 {
+		return compilerSupportString(support, displayText, extraText)
 	} else {
 		return ""
 	}
@@ -106,16 +114,10 @@ func isReportTypeNewFeatureAdded(previous *Feature, next *Feature) bool {
 	return previous == nil && next != nil
 }
 
-func isReportTypeSupportAdded(previous *Feature, next *Feature) bool {
-	return (!previous.GccSupport && next.GccSupport) ||
-		(!previous.ClangSupport && next.ClangSupport) ||
-		(!previous.MsvcSupport && next.MsvcSupport)
-}
-
-func isReportTypeSupportRemoved(previous *Feature, next *Feature) bool {
-	return (previous.GccSupport && !next.GccSupport) ||
-		(previous.ClangSupport && !next.ClangSupport) ||
-		(previous.MsvcSupport && !next.MsvcSupport)
+func isReportTypeSupportLevelChanged(previous *Feature, next *Feature) bool {
+	return (previous.GccSupport != next.GccSupport) ||
+		(previous.ClangSupport != next.ClangSupport) ||
+		(previous.MsvcSupport != next.MsvcSupport)
 }
 
 func isReportTypeTextChanged(previous *Feature, next *Feature) bool {
@@ -141,74 +143,20 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 
 		return reportText, nil
 
-	} else if isReportTypeSupportAdded(previous, next) && !isReportTypeSupportRemoved(previous, next) {
-		gccAdded := !previous.GccSupport && next.GccSupport
-		clangAdded := !previous.ClangSupport && next.ClangSupport
-		msvcAdded := !previous.MsvcSupport && next.MsvcSupport
+	} else if isReportTypeSupportLevelChanged(previous, next) {
 
-		gccBit := compilerSupportStringOrNothing(gccAdded, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
-		clangBit := compilerSupportStringOrNothing(clangAdded, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
-		msvcBit := compilerSupportStringOrNothing(msvcAdded, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
+		gccBit := compilerSupportString(next.GccSupport, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
+		clangBit := compilerSupportString(next.ClangSupport, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
+		msvcBit := compilerSupportString(next.MsvcSupport, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
 
-		reportText := fmt.Sprintf("Support for the C++%v feature \"%v\" has been updated at https://en.cppreference.com/w/cpp/compiler_support. Support added: ", next.CppVersion, next.Name)
+		reportText := fmt.Sprintf("Support for the C++%v feature \"%v\" has been updated at https://en.cppreference.com/w/cpp/compiler_support. Support after change: ", next.CppVersion, next.Name)
 
-		if gccAdded {
-			reportText += "GCC: " + gccBit
-		}
+		reportText += "GCC: " + gccBit
+		reportText += ", "
+		reportText += "Clang: " + clangBit
 
-		if clangAdded {
-
-			if gccAdded {
-				reportText += ", "
-			}
-
-			reportText += "Clang: " + clangBit
-		}
-
-		if msvcAdded {
-
-			if gccAdded || clangAdded {
-				reportText += ", "
-			}
-
-			reportText += "MSVC: " + msvcBit
-		}
-
-		reportText = twitterTrimmed(reportText)
-
-		return reportText, nil
-	} else if isReportTypeSupportRemoved(previous, next) && !isReportTypeSupportAdded(previous, next) {
-		gccRemoved := previous.GccSupport && !next.GccSupport
-		clangRemoved := previous.ClangSupport && !next.ClangSupport
-		msvcRemoved := previous.MsvcSupport && !next.MsvcSupport
-
-		gccBit := compilerSupportString(!gccRemoved, fromNullString(next.GccDisplayText), fromNullString(next.GccExtraText))
-		clangBit := compilerSupportString(!clangRemoved, fromNullString(next.ClangDisplayText), fromNullString(next.ClangExtraText))
-		msvcBit := compilerSupportString(!msvcRemoved, fromNullString(next.MsvcDisplayText), fromNullString(next.MsvcExtraText))
-
-		reportText := fmt.Sprintf("Support for the C++%v feature \"%v\" has been removed at https://en.cppreference.com/w/cpp/compiler_support. Resulting statuses: ", next.CppVersion, next.Name)
-
-		if gccRemoved {
-			reportText += "GCC: " + gccBit
-		}
-
-		if clangRemoved {
-
-			if gccRemoved {
-				reportText += ", "
-			}
-
-			reportText += "Clang: " + clangBit
-		}
-
-		if msvcRemoved {
-
-			if gccRemoved || clangRemoved {
-				reportText += ", "
-			}
-
-			reportText += "MSVC: " + msvcBit
-		}
+		reportText += ", "
+		reportText += "MSVC: " + msvcBit
 
 		reportText = twitterTrimmed(reportText)
 

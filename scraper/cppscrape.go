@@ -24,7 +24,7 @@ func parseCppVersion(text string) (int, error) {
 }
 
 type CompilerSupport struct {
-	HasSupport    bool
+	Support       int
 	DisplayString string
 	ExtraString   string
 }
@@ -46,6 +46,16 @@ type CppVersionSupport struct {
 
 type CppSupport struct {
 	Versions []CppVersionSupport
+}
+
+func supportFromElement(element *goquery.Selection) int {
+	if element.HasClass("table-yes") {
+		return 1
+	} else if element.HasClass("table-no") {
+		return 0
+	} else {
+		return 2
+	}
 }
 
 func ScrapeCppSupport() (result CppSupport, err error) {
@@ -127,35 +137,35 @@ func ScrapeCppSupport() (result CppSupport, err error) {
 			//paperDataElement.Next() //version data element
 
 			gccDataElement := paperDataElement.Next().Next()
-			gccSupports := gccDataElement.HasClass("table-yes")
+			gccSupports := supportFromElement(gccDataElement)
 			gccSupportsString := gccDataElement.Text()
 			gccSupportsString = strings.TrimSpace(gccSupportsString)
 			gccSupportsStringExtra := gccDataElement.Children().First().AttrOr("title", "")
 			gccSupportsStringExtra = strings.TrimSpace(gccSupportsStringExtra)
 
-			featureData.GccSupport.HasSupport = gccSupports
+			featureData.GccSupport.Support = gccSupports
 			featureData.GccSupport.DisplayString = gccSupportsString
 			featureData.GccSupport.ExtraString = gccSupportsStringExtra
 
 			clangDataElement := gccDataElement.Next()
-			clangSupports := clangDataElement.HasClass("table-yes")
+			clangSupports := supportFromElement(clangDataElement)
 			clangSupportsString := clangDataElement.Text()
 			clangSupportsString = strings.TrimSpace(clangSupportsString)
 			clangSupportsStringExtra := clangDataElement.Children().First().AttrOr("title", "")
 			clangSupportsStringExtra = strings.TrimSpace(clangSupportsStringExtra)
 
-			featureData.ClangSupport.HasSupport = clangSupports
+			featureData.ClangSupport.Support = clangSupports
 			featureData.ClangSupport.DisplayString = clangSupportsString
 			featureData.ClangSupport.ExtraString = clangSupportsStringExtra
 
 			msvcDataElement := clangDataElement.Next()
-			msvcSupports := msvcDataElement.HasClass("table-yes")
+			msvcSupports := supportFromElement(msvcDataElement)
 			msvcSupportsString := msvcDataElement.Text()
 			msvcSupportsString = strings.TrimSpace(msvcSupportsString)
 			msvcSupportsStringExtra := msvcDataElement.Children().First().AttrOr("title", "")
 			msvcSupportsStringExtra = strings.TrimSpace(msvcSupportsStringExtra)
 
-			featureData.MsvcSupport.HasSupport = msvcSupports
+			featureData.MsvcSupport.Support = msvcSupports
 			featureData.MsvcSupport.DisplayString = msvcSupportsString
 			featureData.MsvcSupport.ExtraString = msvcSupportsStringExtra
 

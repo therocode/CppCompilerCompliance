@@ -117,13 +117,13 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 								CppVersion:       cppVersion.Version,
 								PaperName:        sql.NullString{feature.PaperName, true},
 								PaperLink:        sql.NullString{feature.PaperLink, true},
-								GccSupport:       feature.GccSupport.HasSupport,
+								GccSupport:       feature.GccSupport.Support,
 								GccDisplayText:   sql.NullString{feature.GccSupport.DisplayString, true},
 								GccExtraText:     sql.NullString{feature.GccSupport.ExtraString, true},
-								ClangSupport:     feature.ClangSupport.HasSupport,
+								ClangSupport:     feature.ClangSupport.Support,
 								ClangDisplayText: sql.NullString{feature.ClangSupport.DisplayString, true},
 								ClangExtraText:   sql.NullString{feature.ClangSupport.ExtraString, true},
-								MsvcSupport:      feature.MsvcSupport.HasSupport,
+								MsvcSupport:      feature.MsvcSupport.Support,
 								MsvcDisplayText:  sql.NullString{feature.MsvcSupport.DisplayString, true},
 								MsvcExtraText:    sql.NullString{feature.MsvcSupport.ExtraString, true},
 							}
@@ -306,24 +306,24 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 		CppVersion:       20,
 		PaperName:        sql.NullString{"P0702R1", true},
 		PaperLink:        sql.NullString{"https://wg21.link/P0702R1", true},
-		GccSupport:       false,
+		GccSupport:       0,
 		GccDisplayText:   sql.NullString{"", true},
 		GccExtraText:     sql.NullString{"", true},
-		ClangSupport:     true,
+		ClangSupport:     1,
 		ClangDisplayText: sql.NullString{"6 (partial)*", true},
 		ClangExtraText:   sql.NullString{"only supported if flag supplied", true},
-		MsvcSupport:      false,
+		MsvcSupport:      0,
 		MsvcDisplayText:  sql.NullString{"", true},
 		MsvcExtraText:    sql.NullString{"", true},
 	}
 
 	newSupportFeature := baseFeature
-	newSupportFeature.GccSupport = true
+	newSupportFeature.GccSupport = 1
 	newSupportFeature.GccDisplayText = sql.NullString{"9*", true}
 	newSupportFeature.GccExtraText = sql.NullString{"still some bugs", true}
 
 	newSupportMultipleFeature := newSupportFeature
-	newSupportMultipleFeature.MsvcSupport = true
+	newSupportMultipleFeature.MsvcSupport = 1
 	newSupportMultipleFeature.MsvcDisplayText = sql.NullString{"19.20", true}
 	newSupportMultipleFeature.MsvcExtraText = sql.NullString{"", true}
 
