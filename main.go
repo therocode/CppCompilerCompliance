@@ -317,6 +317,11 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 		MsvcExtraText:    sql.NullString{"", true},
 	}
 
+	baseFeatureSupportsTwo := baseFeature
+	baseFeatureSupportsTwo.MsvcSupport = 2
+	baseFeatureSupportsTwo.MsvcDisplayText.String = "19.20"
+	baseFeatureSupportsTwo.MsvcExtraText.String = "not bug free"
+
 	newSupportFeature := baseFeature
 	newSupportFeature.GccSupport = 1
 	newSupportFeature.GccDisplayText = sql.NullString{"9*", true}
@@ -327,7 +332,7 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 	newSupportMultipleFeature.MsvcDisplayText = sql.NullString{"19.20", true}
 	newSupportMultipleFeature.MsvcExtraText = sql.NullString{"", true}
 
-	textChangeFeature := baseFeature
+	textChangeFeature := baseFeatureSupportsTwo
 	textChangeFeature.ClangDisplayText = sql.NullString{"6", true}
 	textChangeFeature.ClangExtraText = sql.NullString{"", true}
 
@@ -390,7 +395,7 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	//test for when a feature has had its text changed
-	text, err = compliance.FeatureToTwitterReport(&baseFeature, &textChangeFeature)
+	text, err = compliance.FeatureToTwitterReport(&baseFeatureSupportsTwo, &textChangeFeature)
 
 	if err != nil {
 		log.Printf("Report when a feature had its text changed:\n Error: %v\n\n", err)
@@ -399,7 +404,7 @@ func testCmdFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	//test for when a feature has had mutiple texts changed
-	text, err = compliance.FeatureToTwitterReport(&newSupportFeature, &textChangeMultipleFeature)
+	text, err = compliance.FeatureToTwitterReport(&baseFeatureSupportsTwo, &textChangeMultipleFeature)
 
 	if err != nil {
 		log.Printf("Report when a feature had multiple text changed:\n Error: %v\n\n", err)
