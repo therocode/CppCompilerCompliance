@@ -255,11 +255,16 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 					if !cfg.SupressReporting {
 						messagePrefix := "Dry run: "
 						//tweet, resp, err
-						if !cfg.DryReporting {
+						if !cfg.DryReporting && twitterReport != "" { //do not post if we do dry run or message is empty
 							_, _, err = client.Statuses.Update(twitterReport, nil)
 							messagePrefix = ""
 						}
-						log.Printf(messagePrefix+"posting tweet: %v\n", twitterReport)
+
+						if twitterReport != "" {
+							log.Printf(messagePrefix+"posting tweet: %v\n", twitterReport)
+						} else {
+							log.Printf(messagePrefix + "found change that I don't care about. setting as reported.\n")
+						}
 
 						if err != nil {
 							log.Printf("error posting tweet update: %v\n", err)
@@ -274,6 +279,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) error {
 						complianceStorageService.SetTwitterReported(context.Background(), &entry)
 					}
 				}
+				break
 			case <-quitChan:
 				log.Println("stopping tweet reporter ticker")
 				tweetReporterTicker.Stop()

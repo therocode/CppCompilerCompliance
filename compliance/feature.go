@@ -71,7 +71,7 @@ func compilerVersionTextString(displayText string, extraText string) string {
 
 func compilerSupportString(support int, displayText string, extraText string) string {
 	if support == 0 {
-		return "[no]"
+		return "[no] " + compilerVersionTextString(displayText, extraText)
 	} else if support == 1 {
 		return "[yes] " + compilerVersionTextString(displayText, extraText)
 	} else {
@@ -79,17 +79,34 @@ func compilerSupportString(support int, displayText string, extraText string) st
 	}
 }
 
+func isReportTypePaperModified(previous *Feature, next *Feature) bool {
+	if previous == nil || next == nil {
+		return false
+	}
+
+	return previous.PaperLink != next.PaperLink ||
+		previous.PaperName != next.PaperName
+}
+
 func isReportTypeNewFeatureAdded(previous *Feature, next *Feature) bool {
 	return previous == nil && next != nil
 }
 
 func isReportTypeSupportLevelChanged(previous *Feature, next *Feature) bool {
+	if previous == nil || next == nil {
+		return false
+	}
+
 	return (previous.GccSupport != next.GccSupport) ||
 		(previous.ClangSupport != next.ClangSupport) ||
 		(previous.MsvcSupport != next.MsvcSupport)
 }
 
 func isReportTypeTextChanged(previous *Feature, next *Feature) bool {
+	if previous == nil || next == nil {
+		return false
+	}
+
 	return (previous.GccDisplayText != next.GccDisplayText) ||
 		(previous.GccExtraText != next.GccExtraText) ||
 		(previous.ClangDisplayText != next.ClangDisplayText) ||
@@ -130,7 +147,9 @@ func compilerSupportListing(feature *Feature, listGcc bool, listClang bool, list
 }
 
 func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
-	if isReportTypeNewFeatureAdded(previous, next) {
+	if isReportTypePaperModified(previous, next) {
+		return "", nil //returning empty string means that this is a change we don't care about reporting at all. will be marked reported
+	} else if isReportTypeNewFeatureAdded(previous, next) {
 		supportListing := compilerSupportListing(next, true, true, true)
 
 		reportText := fmt.Sprintf("[New Listing] C++%v - \"%v\".\n\nSupport:\n%v", next.CppVersion, next.Name, supportListing)
