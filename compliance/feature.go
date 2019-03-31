@@ -147,7 +147,7 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 		previousSupportListing := compilerSupportListing(previous, listGcc, listClang, listMsvc)
 		nextSupportListing := compilerSupportListing(next, listGcc, listClang, listMsvc)
 
-		reportText := fmt.Sprintf("[Support Update] C++%v - \"%v\".\n\nFrom:\n%v\n\nto:\n%v", next.CppVersion, next.Name, previousSupportListing, nextSupportListing)
+		reportText := fmt.Sprintf("[Support Update] C++%v - \"%v\".\n\nFrom:\n%v\n\nTo:\n%v", next.CppVersion, next.Name, previousSupportListing, nextSupportListing)
 		reportText = twitterTrimmed(reportText)
 
 		return reportText, nil
@@ -159,7 +159,7 @@ func FeatureToTwitterReport(previous *Feature, next *Feature) (string, error) {
 		previousSupportListing := compilerSupportListing(previous, listGcc, listClang, listMsvc)
 		nextSupportListing := compilerSupportListing(next, listGcc, listClang, listMsvc)
 
-		reportText := fmt.Sprintf("[Text Update] C++%v - \"%v\".\n\nFrom:\n%v\n\nto:\n%v", next.CppVersion, next.Name, previousSupportListing, nextSupportListing)
+		reportText := fmt.Sprintf("[Text Update] C++%v - \"%v\".\n\nFrom:\n%v\n\nTo:\n%v", next.CppVersion, next.Name, previousSupportListing, nextSupportListing)
 		reportText = twitterTrimmed(reportText)
 
 		return reportText, nil
