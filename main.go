@@ -431,7 +431,7 @@ func initConfig() {
 	viper.SetDefault("WebScrapeInterval", 300)
 	viper.SetDefault("TwitterReportInterval", 300)
 	viper.SetDefault("SupressReporting", false)
-	viper.SetDefault("DryReporting", false)
+	viper.SetDefault("DryReporting", true)
 
 	var cfgFile string
 
