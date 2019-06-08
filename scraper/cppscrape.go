@@ -136,7 +136,7 @@ func ScrapeCppSupport() (result CppSupport, err error) {
 
 			//paperDataElement.Next() //version data element
 
-			gccDataElement := paperDataElement.Next().Next()
+			gccDataElement := paperDataElement.Next()
 			gccSupports := supportFromElement(gccDataElement)
 			gccSupportsString := gccDataElement.Text()
 			gccSupportsString = strings.TrimSpace(gccSupportsString)
